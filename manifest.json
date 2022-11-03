@@ -1,0 +1,19 @@
+{
+  "name": "Is YouTube Channel Monetized?",
+  "description": "Display information about YouTube channel monetization status",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.youtube.com/*"],
+      "js": ["contentScript.js"]
+    }
+  ],
+  "permissions": ["tabs", "webNavigation"],
+  "icons": {
+    "128": "icon128.png"
+  }
+}
