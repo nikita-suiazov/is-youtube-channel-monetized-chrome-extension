@@ -1,9 +1,8 @@
-chrome.webNavigation.onCompleted.addListener(({ tabId, url, frameType }) => {
-  if (frameType === 'outermost_frame') chrome.tabs.sendMessage(tabId, { url });
-})
+const handleUrlChange = ({ frameType, tabId, url }) => {
+  if (frameType === 'outermost_frame') {
+    chrome.tabs.sendMessage(tabId, { url }).catch(() => {});
+  };
+};
 
-chrome.webNavigation.onHistoryStateUpdated.addListener(({ tabId, url: historyStateURL }) => {
-  chrome.tabs.get(tabId, ({ url }) => {
-    if (historyStateURL === url) chrome.tabs.sendMessage(tabId, { url });
-  })
-})
+chrome.webNavigation.onCompleted.addListener(handleUrlChange);
+chrome.webNavigation.onHistoryStateUpdated.addListener(handleUrlChange);

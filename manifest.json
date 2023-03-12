@@ -3,6 +3,7 @@
   "description": "Display information about YouTube channel monetization status",
   "version": "1.0",
   "manifest_version": 3,
+  "icons": { "128": "icon128.png" },
   "background": {
     "service_worker": "background.js"
   },
@@ -12,8 +13,6 @@
       "js": ["contentScript.js"]
     }
   ],
-  "permissions": ["tabs", "webNavigation"],
-  "icons": {
-    "128": "icon128.png"
-  }
+  "permissions": ["webNavigation"],
+  "host_permissions": ["https://*.youtube.com/*"]
 }
