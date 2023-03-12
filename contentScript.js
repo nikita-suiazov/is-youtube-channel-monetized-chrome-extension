@@ -4,8 +4,6 @@ const extractString = ({ bodyText, startString, endString }) => (
   bodyText.match(`(?<=${startString}).*?(?=${endString})`)[0] || null
 );
 
-let fetchController = new AbortController();
-
 const getChannelUrl = (videoUrl) => {
   const { signal } = fetchController;
 
@@ -60,13 +58,15 @@ const getSubscriberCountElement = (isVideoPageUrl) => new Promise((resolve) => {
 });
 
 const createMonetizationStatusElement = (isMonetized, isVideoPageUrl) => {
-  const monetizationStatusText = isMonetized ? 'Channel is monetized' : 'Channel is not monetized';
   const textColor = isMonetized ? '#4CBB17' : '#D22B2B';
   const fontSize = isVideoPageUrl ? '1.2rem' : '1.4rem';
   const style = `'font-size: ${fontSize}; font-weight: 400; color:${textColor}'`;
+  const monetizationStatusText = isMonetized ? 'Channel is monetized' : 'Channel is not monetized';
 
   return `<div id='monetization-status' style=${style}>${monetizationStatusText}</div>`;
 };
+
+let fetchController = new AbortController();
 
 chrome.runtime.onMessage.addListener(async ({ url }) => {
   fetchController.abort();
