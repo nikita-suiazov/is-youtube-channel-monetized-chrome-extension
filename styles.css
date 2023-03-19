@@ -1,0 +1,24 @@
+.monetization-status-loading::after {
+  display: inline-block;
+  content: '';
+  width: 10px;
+  animation: loading 2s infinite linear;
+}
+
+@keyframes loading {
+  0% { content: '.'; }
+  50% { content: '..'; }
+  100% { content: '...'; }
+}
+
+.monetization-status-loaded {
+  animation: fadeOutIn 1s linear;
+}
+
+@keyframes fadeOutIn {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+
