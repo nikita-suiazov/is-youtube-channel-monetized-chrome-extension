@@ -53,14 +53,14 @@ const checkIsMonetized = async (url, isVideoPageUrl) => {
   );
 };
 
-const getSubscriberCountElement = (isVideoPageUrl) => new Promise((resolve) => {
+const getChannelNameElement = (isVideoPageUrl) => new Promise((resolve) => {
   const observer = new MutationObserver(() => {
-    const subscriberCountElementId = isVideoPageUrl ? 'owner-sub-count' : 'subscriber-count';
-    const subscriberCountElement = document.getElementById(subscriberCountElementId);
+    const channelNameElementQuery = isVideoPageUrl ? '#owner #channel-name' : '#inner-header-container #channel-name';
+    const channelNameElement = document.querySelector(channelNameElementQuery);
   
-    if (subscriberCountElement) {
+    if (channelNameElement) {
       observer.disconnect();
-      resolve(subscriberCountElement);
+      resolve(channelNameElement);
     }
   });
 
@@ -79,11 +79,11 @@ const createMonetizationStatusLoadingElement = (isVideoPageUrl) => {
 };
 
 const insertMonetizationStatusLoadingElement = async (isVideoPageUrl) => {
-  const subscriberCountElement = await getSubscriberCountElement(isVideoPageUrl);
+  const channelNameElement = await getChannelNameElement(isVideoPageUrl);
   const monetizationStatusLoadingElement = createMonetizationStatusLoadingElement(isVideoPageUrl);
 
   document.getElementById('monetization-status')?.remove();
-  subscriberCountElement.after(monetizationStatusLoadingElement);
+  channelNameElement.after(monetizationStatusLoadingElement);
 
   return monetizationStatusLoadingElement;
 };
