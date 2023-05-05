@@ -1,61 +1,35 @@
 const validUrlChunks = ['/c/', '/channel/', '/user/', '/@', '/watch?v='];
 const isValidUrl = (url) => validUrlChunks.some((chunk) => url.includes(chunk));
-
 const replaceProtocol = (url) => url.replace('http:', 'https:');
 
-const extractString = ({ bodyText, startString, endString }) => (
-  bodyText.match(`(?<=${startString}).*?(?=${endString})`)[0] || null
+const extractString = (text, [startString, endString]) => (
+  text.match(`(?<=${startString}).*?(?=${endString})`)[0] || null
 );
 
 let fetchController = new AbortController();
 
-const abortPreviousFetch = () => {
-  fetchController.abort();
-  fetchController = new AbortController();
+const extractStringFromResponseBody = ({ url, betweenStrings }) => (
+  fetch(url, { signal: fetchController.signal })
+    .then((response) => response.text())
+    .then((bodyText) => extractString(bodyText, betweenStrings))
+    .catch(() => null)
+);
+
+const getChannelUrl = (url) => {
+  const channelUrlString = extractStringFromResponseBody({ url, betweenStrings: ['@id": "', '"'] });
+
+  return replaceProtocol(channelUrlString);
 };
 
-const getChannelUrl = (videoUrl) => {
-  const { signal } = fetchController;
+const checkIsMonetized = (url) => {
+  const monetizationStatusString = extractStringFromResponseBody({ url, betweenStrings: ['"is_monetization_enabled","value":"', '"'] });
 
-  return (
-    fetch(videoUrl, { signal })
-      .then((response) => response.text())
-      .then((bodyText) => {
-        const channelUrl = extractString({
-          bodyText,
-          startString: '@id": "',
-          endString: '"',
-        });
-
-        return replaceProtocol(channelUrl);
-      })
-      .catch(() => null)
-  );
+  return JSON.parse(monetizationStatusString);
 };
 
-const checkIsMonetized = async (url, isVideoPageUrl) => {
-  const { signal } = fetchController;
-  const channelUrl = isVideoPageUrl ? await getChannelUrl(url) : url;
-
-  return (
-    fetch(channelUrl, { signal })
-      .then((response) => response.text())
-      .then((bodyText) => {
-        const monetizationStatusString = extractString({
-          bodyText,
-          startString: '"is_monetization_enabled","value":"',
-          endString: '"',
-        });
-      
-        return JSON.parse(monetizationStatusString);
-      })
-      .catch(() => null)
-  );
-};
-
-const getChannelNameElement = (isVideoPageUrl) => new Promise((resolve) => {
+const getChannelNameElement = (isVideoUrl) => new Promise((resolve) => {
   const observer = new MutationObserver(() => {
-    const channelNameElementQuery = isVideoPageUrl ? '#owner #channel-name' : '#inner-header-container #channel-name';
+    const channelNameElementQuery = isVideoUrl ? '#owner #channel-name' : '#inner-header-container #channel-name';
     const channelNameElement = document.querySelector(channelNameElementQuery);
   
     if (channelNameElement) {
@@ -67,8 +41,9 @@ const getChannelNameElement = (isVideoPageUrl) => new Promise((resolve) => {
   observer.observe(document.body, { childList: true, subtree: true });
 });
 
-const createMonetizationStatusLoadingElement = (isVideoPageUrl) => {
-  const fontSize = isVideoPageUrl ? '1.2rem' : '1.4rem';
+const createMonetizationStatusLoadingElement = (isVideoUrl) => {
+  const fontSize = isVideoUrl ? '1.2rem' : '1.4rem';
+
   const element = document.createElement('div');
   element.id = 'monetization-status';
   element.className = 'monetization-status-loading';
@@ -78,24 +53,25 @@ const createMonetizationStatusLoadingElement = (isVideoPageUrl) => {
   return element;
 };
 
-const insertMonetizationStatusLoadingElement = async (isVideoPageUrl) => {
-  const channelNameElement = await getChannelNameElement(isVideoPageUrl);
-  const monetizationStatusLoadingElement = createMonetizationStatusLoadingElement(isVideoPageUrl);
+const insertMonetizationStatusLoadingElement = async (isVideoUrl) => {
+  const channelNameElement = await getChannelNameElement(isVideoUrl);
+  const monetizationStatusLoadingElement = createMonetizationStatusLoadingElement(isVideoUrl);
 
   document.getElementById('monetization-status')?.remove();
+
   channelNameElement.after(monetizationStatusLoadingElement);
 
   return monetizationStatusLoadingElement;
 };
 
+const monetizationStatusTextMap = new Map([
+  [true, 'Channel is monetized'],
+  [false, 'Channel is not monetized'],
+  [null, 'Monetization status unknown'],
+]);
+
 const updateMonetizationStatusElement = (monetizationStatusElement, isMonetized) => {
   const textColor = isMonetized ? '#4CBB17' : '#D22B2B';
-  const monetizationStatusTextMap = new Map([
-    [true, 'Channel is monetized'],
-    [false, 'Channel is not monetized'],
-    [null, 'Monetization status unknown'],
-  ]);
-
   monetizationStatusElement.className = 'monetization-status-loaded';
 
   setTimeout(() => {
@@ -104,14 +80,21 @@ const updateMonetizationStatusElement = (monetizationStatusElement, isMonetized)
   }, 500);
 };
 
+const abortPreviousFetch = () => {
+  fetchController.abort();
+  fetchController = new AbortController();
+};
+
 chrome.runtime.onMessage.addListener(async ({ url }) => {
   if (!isValidUrl(url)) return;
   abortPreviousFetch();
 
-  const isVideoPageUrl = url.includes('watch?v=');
+  const isVideoUrl = url.includes('watch?v=');
+  const channelUrl = isVideoUrl ? await getChannelUrl(url) : url;
+
   const [isMonetized, monetizationStatusLoadingElement] = await Promise.all([
-    checkIsMonetized(url, isVideoPageUrl),
-    insertMonetizationStatusLoadingElement(isVideoPageUrl),
+    checkIsMonetized(channelUrl),
+    insertMonetizationStatusLoadingElement(isVideoUrl),
   ]);
 
   updateMonetizationStatusElement(monetizationStatusLoadingElement, isMonetized);
